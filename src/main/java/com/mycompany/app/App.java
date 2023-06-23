@@ -20,7 +20,7 @@ import javax.swing.SwingUtilities;
 import com.fazecast.jSerialComm.SerialPort;
 
 public class App {
-    public static final int QUEUE_MAX_SIZE = 200;
+    public static final int QUEUE_MAX_SIZE = 4000;
     private static Deque<Integer> queue = new LinkedList<>();
     private static double[][] data = new double[2][QUEUE_MAX_SIZE];
     private static DefaultXYDataset dataset = new DefaultXYDataset();
@@ -33,16 +33,18 @@ public class App {
         public void run() {
             int i = 0;
             for (Integer number : queue) {
+                if (number == 0) {
+                    System.out.println("00000000000000000000000000000000000000000000000000");
+                }
                 data[0][i] = i++;
-                data[1][i] = number;
+                data[1][i] = number-2000;
             }
             if(i<QUEUE_MAX_SIZE){
                 int tem_i = i;
                 data[0][i] = tem_i;
                 for(;i<QUEUE_MAX_SIZE;i++){
                     try{
-                        int tem = queue.getLast();
-                        data[1][i] = queue.getLast();
+                        data[1][i] = queue.getLast()-2000;
                     }catch(Exception e){
                         data[1][i] = 0;
                     }
@@ -88,16 +90,36 @@ public class App {
         
         Timer timer = new Timer();
         timer.schedule(updateDataTask, 0, 1000); // 每秒更新一次数据
+        int countBetweenPuse = 0;
         try {
             Scanner scanner = new Scanner(in);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                if (line.matches("V=\\d{4}mV")) {
-                    int number = Integer.parseInt(line.substring(2, 6));
-                    queue.offer(number);
-                    if (queue.size() >= QUEUE_MAX_SIZE) {
-                        queue.poll();
+                //if (line.matches("V=\\d{4}mV")) {
+                //    int number = Integer.parseInt(line.substring(2, 6));
+                //    queue.offer(number);
+                //    System.out.println(number);
+                //    if (queue.size() >= QUEUE_MAX_SIZE) {
+                //        queue.poll();
+                //    }
+                //}
+                int number = Integer.parseInt(line);
+                countBetweenPuse++;
+                if (number < 2200 && countBetweenPuse > 10) {
+                    Double rate = 60.0 / (countBetweenPuse * 0.01);
+                    System.out.println("rate: " + rate);
+                    if (rate > 100) {
+                        System.out.println("心率过高请注意休息");
+                    } else if (rate < 55) {
+                        System.out.println("心率过低");
                     }
+                    //System.out.println(60.0/(countBetweenPuse*0.01));
+                    countBetweenPuse = 0;
+                }
+                queue.offer(number);
+                //System.out.println(number);
+                if (queue.size() >= QUEUE_MAX_SIZE) {
+                    queue.poll();
                 }
             }
             scanner.close();
@@ -130,6 +152,7 @@ public class App {
                 false // 是否生成URL链接
         );
 
+        //TODO:使图表的y轴范围在2000-2500之间
         return chart;
     }
 }
